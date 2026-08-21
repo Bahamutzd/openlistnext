@@ -1,4 +1,37 @@
 {
+  "FTP": {
+    "host": "Host",
+    "host-tips": "FTP server address",
+    "port": "Port",
+    "port-tips": "FTP port, default 21",
+    "username": "Username",
+    "username-tips": "Default anonymous",
+    "password": "Password",
+    "password-tips": "Default guest",
+    "root_folder_path": "Root folder",
+    "root_folder_path-tips": "Root folder, default /",
+    "tls": "Use FTPS",
+    "tls-tips": "FTP over TLS",
+    "tls_insecure_skip_verify": "Skip TLS verify",
+    "tls_insecure_skip_verify-tips": "Skip TLS certificate verification"
+  },
+  "SFTP": {
+    "host": "Host",
+    "host-tips": "SFTP server address",
+    "port": "Port",
+    "port-tips": "SSH port, default 22",
+    "username": "Username",
+    "password": "Password",
+    "password-tips": "Password (or private key)",
+    "private_key": "Private key",
+    "private_key-tips": "Private key content (optional, preferred over password)",
+    "private_key_passphrase": "Private key passphrase",
+    "private_key_passphrase-tips": "Private key passphrase (optional)",
+    "root_folder_path": "Root folder",
+    "root_folder_path-tips": "Root folder, default /",
+    "ignore_hostkey": "Ignore host key",
+    "ignore_hostkey-tips": "Skip host key verification"
+  },
   "115 Cloud": {
     "cookie": "Cookie",
     "cookie-tips": "one of QR code token and cookie required",

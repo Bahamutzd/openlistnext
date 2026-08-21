@@ -10,7 +10,7 @@ import {
   putItem,
   getDriver,
 } from "../internal/op/storage"
-import { resolvePath } from "../internal/model/db"
+import { resolvePath, getDb } from "../internal/model/db"
 import { resolveShare } from "../internal/op/share"
 import { listArchive } from "../pkg/archive"
 
@@ -554,3 +554,82 @@ async function extractZipEntry(
   }
   return null
 }
+
+// ─── 全局搜索（遍历所有存储，按关键字匹配） ───
+
+fsRouter.post("/search", async (c) => {
+  const body = await c.req.json().catch(() => ({}))
+  const { parent, keywords, scope, page, per_page } = body
+  const kw = String(keywords || "").trim()
+  if (!kw) {
+    return c.json({ code: 400, message: "keywords required", data: null })
+  }
+  const parentPath = String(parent || "/")
+  const pageNum = parseInt(page, 10) || 1
+  const perPage = Math.min(parseInt(per_page, 10) || 100, 500)
+
+  // scope: 0 = 当前目录递归；1 = 全盘搜索（原版语义）
+  const all = scope === 1
+
+  try {
+    const db = await getDb(c.env)
+    const activeStorages = (db.storages || []).filter((s: any) => !s.disabled)
+    const results: any[] = []
+    const kwLower = kw.toLowerCase()
+
+    const searchDir = async (dirPath: string, depth: number): Promise<void> => {
+      if (depth > 8 || results.length >= 500) return // 深度/结果上限保护
+      let content: any[] = []
+      try {
+        const { content: c2 } = await listItems(dirPath)
+        content = c2
+      } catch {
+        return // 无法列出的目录跳过
+      }
+      for (const item of content) {
+        if (results.length >= 500) return
+        if (item.name.toLowerCase().includes(kwLower)) {
+          results.push({
+            parent: dirPath,
+            name: item.name,
+            is_dir: item.is_dir,
+            size: item.size || 0,
+            path: dirPath === "/" ? `/${item.name}` : `${dirPath}/${item.name}`,
+            type: item.type ?? 0,
+          })
+        }
+        if (item.is_dir && depth < 8) {
+          const sub =
+            dirPath === "/" ? `/${item.name}` : `${dirPath}/${item.name}`
+          await searchDir(sub, depth + 1)
+        }
+      }
+    }
+
+    if (all) {
+      // 全盘：每个存储根递归
+      const roots = new Set<string>()
+      for (const s of activeStorages) {
+        const mount =
+          "/" + (s.mount_path || "").split("/").filter(Boolean).join("/")
+        roots.add(mount === "" ? "/" : mount)
+      }
+      for (const r of roots) {
+        await searchDir(r, 0)
+      }
+    } else {
+      await searchDir(parentPath, 0)
+    }
+
+    // 分页
+    const start = (pageNum - 1) * perPage
+    const content = results.slice(start, start + perPage)
+    return c.json({
+      code: 200,
+      message: "success",
+      data: { content, total: results.length },
+    })
+  } catch (e: any) {
+    return c.json({ code: 500, message: e.message, data: null })
+  }
+})

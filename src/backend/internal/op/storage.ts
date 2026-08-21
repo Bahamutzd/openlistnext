@@ -18,6 +18,8 @@ import {
 import { Cloud189Driver } from "../../drivers/189/driver"
 import { LanzouDriver } from "../../drivers/lanzou/driver"
 import { WebDavDriver } from "../../drivers/webdav/driver"
+import { FtpDriver } from "../../drivers/ftp/driver"
+import { SftpDriver } from "../../drivers/sftp/driver"
 
 // LocalDriver is not available in Cloudflare Workers (no fs module).
 // When running in Node.js container mode, import dynamically on first use.
@@ -313,6 +315,26 @@ export async function getDriver(
   } else if (normDriver === "webdav" || normDriver === "dav") {
     const addition = parseAddition(storageConfig)
     driver = new WebDavDriver(addition)
+    await driver.init?.()
+  } else if (normDriver === "ftp" || normDriver === "ftps") {
+    // Node-only：需要 net socket（basic-ftp），Workers 不可用
+    if (typeof process === "undefined" || process.release?.name !== "node") {
+      throw new Error(
+        "FTP driver requires Node.js runtime (not available in Cloudflare Workers)",
+      )
+    }
+    const addition = parseAddition(storageConfig)
+    driver = new FtpDriver(addition)
+    await driver.init?.()
+  } else if (normDriver === "sftp" || normDriver === "ssh") {
+    // Node-only：需要 net socket（ssh2），Workers 不可用
+    if (typeof process === "undefined" || process.release?.name !== "node") {
+      throw new Error(
+        "SFTP driver requires Node.js runtime (not available in Cloudflare Workers)",
+      )
+    }
+    const addition = parseAddition(storageConfig)
+    driver = new SftpDriver(addition)
     await driver.init?.()
   } else {
     throw new Error(

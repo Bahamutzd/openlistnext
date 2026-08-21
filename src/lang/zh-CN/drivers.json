@@ -1,4 +1,37 @@
 {
+  "FTP": {
+    "host": "服务器地址",
+    "host-tips": "FTP 服务器地址",
+    "port": "端口",
+    "port-tips": "FTP 端口，默认 21",
+    "username": "用户名",
+    "username-tips": "默认 anonymous",
+    "password": "密码",
+    "password-tips": "默认 guest",
+    "root_folder_path": "根目录",
+    "root_folder_path-tips": "根目录，默认 /",
+    "tls": "使用 FTPS",
+    "tls-tips": "FTP over TLS",
+    "tls_insecure_skip_verify": "跳过 TLS 证书校验",
+    "tls_insecure_skip_verify-tips": "跳过 TLS 证书校验"
+  },
+  "SFTP": {
+    "host": "服务器地址",
+    "host-tips": "SFTP 服务器地址",
+    "port": "端口",
+    "port-tips": "SSH 端口，默认 22",
+    "username": "用户名",
+    "password": "密码",
+    "password-tips": "密码（与私钥二选一）",
+    "private_key": "私钥内容",
+    "private_key-tips": "私钥内容（可选，优先于密码）",
+    "private_key_passphrase": "私钥密码",
+    "private_key_passphrase-tips": "私钥密码（可选）",
+    "root_folder_path": "根目录",
+    "root_folder_path-tips": "根目录，默认 /",
+    "ignore_hostkey": "跳过主机密钥校验",
+    "ignore_hostkey-tips": "跳过主机密钥校验"
+  },
   "115 Cloud": {
     "cookie": "Cookie",
     "cookie-tips": "one of QR code token and cookie required",

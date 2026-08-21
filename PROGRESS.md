@@ -18,6 +18,7 @@
 - [x] 文件/文件夹打包下载 (File/folder archive download) - _Implemented via browser ZIP stream_
 - [x] 网页上传、删除、新建文件夹、重命名、移动和复制 (Web upload, delete, create folder, rename, move, copy) - _Implemented for Local storage_
 - [x] 压缩包浏览/解压 (Archive list/decompress) - _zip/tar 在线浏览+解压（纯 Web 标准，rar/7z 返回提示）_
+- [x] 全局搜索 (Global search) - _/fs/search 递归遍历存储匹配关键字_
 - [x] 离线下载 (Offline download) - _115 / 百度官方离线下载 API（Serverless 可用）+ 工具列表_
 - [x] 跨存储复制文件 (Cross-storage file copy) - _Supported via /fs/copy API abstraction_
 - [x] 单文件多线程下载/流式加速 (Multi-thread download/stream acceleration) - _Implemented HTTP Range requests support in backend_
@@ -38,7 +39,7 @@
 - [x] 百度网盘 (Baidu Netdisk) - _Re-ported from Go v4 driver (driver.go/util.go/types.go/meta.go): official/crack/crack_video download, chunked upload + rapid upload, MD5 obfuscation (EncryptMd5/DecryptMd5), vip slice sizes, dynamic upload domain, token persistence_
 - [x] ~~S3~~ - **_Removed by request_**
 - [x] 天翼云盘 (189Cloud) - _Implemented + chunked upload_
-- [ ] FTP / SFTP
+- [x] FTP / SFTP - _Node-only drivers (basic-ftp / ssh2), guarded in Edge runtime_
 - [ ] PikPak
 - [ ] Seafile
 - [ ] 又拍云对象存储 (Upyun)
