@@ -20,6 +20,8 @@ import { LanzouDriver } from "../../drivers/lanzou/driver"
 import { WebDavDriver } from "../../drivers/webdav/driver"
 import { FtpDriver } from "../../drivers/ftp/driver"
 import { SftpDriver } from "../../drivers/sftp/driver"
+import { Cloud189PcDriver } from "../../drivers/189pc/driver"
+import { StrmDriver } from "../../drivers/strm/driver"
 
 // LocalDriver is not available in Cloudflare Workers (no fs module).
 // When running in Node.js container mode, import dynamically on first use.
@@ -335,6 +337,14 @@ export async function getDriver(
     }
     const addition = parseAddition(storageConfig)
     driver = new SftpDriver(addition)
+    await driver.init?.()
+  } else if (normDriver === "189cloudpc" || normDriver === "189pc") {
+    const addition = parseAddition(storageConfig)
+    driver = new Cloud189PcDriver(addition)
+    await driver.init?.()
+  } else if (normDriver === "strm") {
+    const addition = parseAddition(storageConfig)
+    driver = new StrmDriver(addition)
     await driver.init?.()
   } else {
     throw new Error(

@@ -15,6 +15,33 @@
     "tls_insecure_skip_verify": "跳过 TLS 证书校验",
     "tls_insecure_skip_verify-tips": "跳过 TLS 证书校验"
   },
+  "189CloudPC": {
+    "access_token": "访问令牌",
+    "access_token-tips": "accessToken 登录模式，优先于账号密码",
+    "username": "用户名",
+    "username-tips": "手机号 / 账号",
+    "password": "密码",
+    "cookie": "Cookie",
+    "cookie-tips": "可选，遇验证码时填写",
+    "root_folder_id": "根目录 ID",
+    "root_folder_id-tips": "默认为 -11（个人云根目录）",
+    "order_by": "排序字段",
+    "order_direction": "排序方向"
+  },
+  "Strm": {
+    "paths": "路径映射",
+    "paths-tips": "每行一个：源路径=目标路径（如 /strm=/mnt/media）",
+    "siteUrl": "站点 URL",
+    "siteUrl-tips": "strm 文件内容的前缀 URL",
+    "filterFileTypes": "过滤文件后缀",
+    "filterFileTypes-tips": "要过滤的文件后缀（默认 strm）",
+    "downloadFileTypes": "跟随下载后缀",
+    "downloadFileTypes-tips": "需要跟随下载的文件后缀（默认 ass）",
+    "encodePath": "编码路径",
+    "encodePath-tips": "是否编码 strm 内容中的路径",
+    "withoutUrl": "不含 URL 前缀",
+    "withoutUrl-tips": "strm 文件内容是否不含 URL 前缀"
+  },
   "SFTP": {
     "host": "服务器地址",
     "host-tips": "SFTP 服务器地址",

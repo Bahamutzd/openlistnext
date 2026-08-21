@@ -60,6 +60,8 @@ export class Pan189Client {
   private addition: Cloud189Addition
   private cookie: string = ""
   private sessionKey: string = ""
+  /** 189CloudPC 的 access_token（accessToken 登录模式） */
+  private accessToken: string = ""
   private onCookieUpdate?: (cookie: string) => void
 
   constructor(
@@ -68,11 +70,22 @@ export class Pan189Client {
   ) {
     this.addition = addition
     this.cookie = (addition.cookie || "").trim()
+    this.accessToken = (addition.access_token || "").trim()
     this.onCookieUpdate = onCookieUpdate
   }
 
   public getCookie(): string {
     return this.cookie
+  }
+
+  /** 是否使用 access_token 鉴权（189CloudPC） */
+  public hasAccessToken(): boolean {
+    return !!this.accessToken
+  }
+
+  /** 设置 access_token（登录后更新） */
+  public setAccessToken(token: string): void {
+    this.accessToken = token
   }
 
   public getRootId(): string {
@@ -287,6 +300,10 @@ export class Pan189Client {
       for (const [k, v] of Object.entries(options.params)) {
         if (v !== undefined) urlObj.searchParams.set(k, v)
       }
+    }
+    // 189CloudPC：access_token 模式（accessToken 登录，替代 Cookie/SessionKey）
+    if (this.accessToken && !options.params?.accessToken) {
+      urlObj.searchParams.set("accessToken", this.accessToken)
     }
 
     const headers: Record<string, string> = {

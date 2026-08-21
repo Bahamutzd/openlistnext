@@ -15,6 +15,33 @@
     "tls_insecure_skip_verify": "Skip TLS verify",
     "tls_insecure_skip_verify-tips": "Skip TLS certificate verification"
   },
+  "189CloudPC": {
+    "access_token": "Access token",
+    "access_token-tips": "accessToken login mode, preferred over username/password",
+    "username": "Username",
+    "username-tips": "Phone number / account",
+    "password": "Password",
+    "cookie": "Cookie",
+    "cookie-tips": "Optional, for captcha",
+    "root_folder_id": "Root folder ID",
+    "root_folder_id-tips": "Default -11 (personal cloud root)",
+    "order_by": "Order by",
+    "order_direction": "Order direction"
+  },
+  "Strm": {
+    "paths": "Path mappings",
+    "paths-tips": "One per line: src=dst (e.g. /strm=/mnt/media)",
+    "siteUrl": "Site URL",
+    "siteUrl-tips": "Prefix URL for strm file content",
+    "filterFileTypes": "Filter file types",
+    "filterFileTypes-tips": "File suffixes to filter (default strm)",
+    "downloadFileTypes": "Download file types",
+    "downloadFileTypes-tips": "File suffixes to download with strm (default ass)",
+    "encodePath": "Encode path",
+    "encodePath-tips": "Whether to encode the path in strm content",
+    "withoutUrl": "Without URL prefix",
+    "withoutUrl-tips": "Whether strm content lacks URL prefix"
+  },
   "SFTP": {
     "host": "Host",
     "host-tips": "SFTP server address",

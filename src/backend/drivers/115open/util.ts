@@ -226,7 +226,9 @@ export class Pan115Client {
         )
       }
       // 对象不存在错误（430004）——SDK ErrObjectNotFound
-      if (code === ERR_OBJECT_NOT_FOUND) {
+      // 115 对"路径不存在 / 路径带尾斜杠"也返回 20001（目录名称不能为空），
+      // 同样映射为对象不存在，让上层走逐层目录解析 fallback。
+      if (code === ERR_OBJECT_NOT_FOUND || code === 20001) {
         const err: any = new Error("115 object not found")
         err.code = ERR_OBJECT_NOT_FOUND
         throw err
@@ -277,9 +279,11 @@ export class Pan115Client {
   public async getFolderInfoByPath(
     path: string,
   ): Promise<Pan115FolderInfoResp> {
+    // 115 API 对带尾斜杠的 path 返回 20001（目录名称不能为空），需去掉尾斜杠
+    const cleanPath = path === "/" ? "/" : path.replace(/\/+$/, "")
     return (
       await this.request(ApiFsGetFolderInfo, "POST", undefined, {
-        path,
+        path: cleanPath,
       })
     )?.data as Pan115FolderInfoResp
   }

@@ -11,6 +11,8 @@ export interface Cloud189Addition {
    * 自动登录成功后会自动持久化回此字段。
    */
   cookie?: string
+  /** 189CloudPC：access_token（accessToken 登录模式，优先于账号密码） */
+  access_token?: string
   /** 根文件夹 ID，默认 -11（个人云根目录） */
   root_folder_id?: string
   /** 排序字段 */

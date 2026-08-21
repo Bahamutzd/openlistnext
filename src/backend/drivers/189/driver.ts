@@ -52,6 +52,7 @@ export function normalizeCloud189Addition(a: any): Cloud189Addition {
   norm.username = norm.username || ""
   norm.password = norm.password || ""
   norm.cookie = (norm.cookie || "").trim()
+  norm.access_token = norm.access_token || ""
   norm.root_folder_id = norm.root_folder_id || "-11"
   norm.order_by = norm.order_by || "lastOpTime"
   norm.order_direction = norm.order_direction || "desc"
@@ -75,6 +76,10 @@ export class Cloud189Driver implements StorageDriver {
   }
 
   async init(): Promise<void> {
+    if (this.client.hasAccessToken()) {
+      // 189CloudPC：access_token 模式（无需账号密码登录）
+      return
+    }
     await this.client.login()
   }
 
