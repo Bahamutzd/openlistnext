@@ -30,6 +30,9 @@ const ApiFsDelete = API_BASE + "/open/ufile/delete"
 const ApiUserInfo = API_BASE + "/open/user/info"
 const ApiRefreshToken = API_AUTH + "/open/refreshToken"
 
+// Offline download (离线下载)
+const ApiAddOffline = API_BASE + "/open/offline/add_task_urls"
+
 /** 401 开头或 99 的错误码 → token 失效，需要刷新（对应 SDK Is401Started） */
 function isAuthError(code: number): boolean {
   return code === 99 || String(code).startsWith("401")
@@ -362,5 +365,39 @@ export class Pan115Client {
         sign_val: opts.signVal || "",
       })
     )?.data as Pan115UploadInitResp
+  }
+
+  // ---- Offline download（115 官方离线下载，磁力/HTTP/ED2K） ----
+
+  /**
+   * 添加离线下载任务（由 115 服务器后台下载，Serverless 也可用）
+   * @param urls 下载地址（http/https/magnet/ed2k）
+   * @param pid 保存到的文件夹 ID（"0" = 根目录）
+   */
+  public async addOfflineTask(
+    urls: string[],
+    pid: string,
+  ): Promise<{ task_id: string; name?: string }[]> {
+    const form: Record<string, string> = {
+      pid: pid || "0",
+      url: urls.join("\n"),
+    }
+    const resp = (await this.request(
+      ApiAddOffline,
+      "POST",
+      undefined,
+      form,
+    )) as any
+    const data = resp?.data
+    if (!data) {
+      throw new Error(
+        `115 离线下载添加失败（${resp?.message || "无返回数据"}）`,
+      )
+    }
+    const list = Array.isArray(data) ? data : data?.list || []
+    return list.map((t: any) => ({
+      task_id: String(t?.task_id ?? ""),
+      name: t?.name || "",
+    }))
   }
 }

@@ -674,6 +674,33 @@ export class BaiduClient {
 
   // ---- Quota (GetDetails) ----
 
+  /**
+   * 添加百度网盘离线下载任务（由百度服务器后台下载，支持 http/https/ftp/磁力）
+   * @param urls 下载地址列表
+   * @param savePath 保存目录（百度路径，如 /Downloads）
+   * @returns 任务 ID 列表
+   */
+  public async addOfflineTask(
+    urls: string[],
+    savePath: string,
+  ): Promise<{ task_id: string }[]> {
+    const body = (await this.request(
+      PAN_API + "/services/cloud_dl",
+      "POST",
+      { method: "add_task", app_id: "250528" },
+      { source_url: urls.join("\n"), save_path: savePath || "/" },
+    )) as any
+    const taskIds = Array.isArray(body?.task_ids)
+      ? body.task_ids.map((t: any) => String(t))
+      : []
+    if (!taskIds.length) {
+      throw new Error(
+        `百度网盘离线下载添加失败（errno ${body?.errno ?? "?"}）：${body?.error_msg || "无任务 ID"}`,
+      )
+    }
+    return taskIds.map((id: string) => ({ task_id: id }))
+  }
+
   public async quota(): Promise<{ total: number; used: number }> {
     const body = (await this.request(
       "https://pan.baidu.com/api/quota",

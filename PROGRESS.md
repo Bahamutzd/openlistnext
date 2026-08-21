@@ -17,7 +17,8 @@
 - [x] Cloudflare Workers / Vercel 代理 - _Supported via entrypoints_
 - [x] 文件/文件夹打包下载 (File/folder archive download) - _Implemented via browser ZIP stream_
 - [x] 网页上传、删除、新建文件夹、重命名、移动和复制 (Web upload, delete, create folder, rename, move, copy) - _Implemented for Local storage_
-- [x] 离线下载 (Offline download) - _Basic implementation (Serverless mode limited)_
+- [x] 压缩包浏览/解压 (Archive list/decompress) - _zip/tar 在线浏览+解压（纯 Web 标准，rar/7z 返回提示）_
+- [x] 离线下载 (Offline download) - _115 / 百度官方离线下载 API（Serverless 可用）+ 工具列表_
 - [x] 跨存储复制文件 (Cross-storage file copy) - _Supported via /fs/copy API abstraction_
 - [x] 单文件多线程下载/流式加速 (Multi-thread download/stream acceleration) - _Implemented HTTP Range requests support in backend_
 - [x] 分享功能 (Shares) - _Full CRUD + /@s/{id} browse + /sd/{id} download + auto ID + copy URL_

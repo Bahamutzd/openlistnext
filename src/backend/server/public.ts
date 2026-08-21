@@ -129,10 +129,25 @@ publicRouter.get("/archive_extensions", (c) => {
   })
 })
 
-publicRouter.get("/offline_download_tools", (c) => {
+publicRouter.get("/offline_download_tools", async (c) => {
+  const db = await getDb(c.env)
+  const tools: string[] = []
+  for (const s of db.storages || []) {
+    if (s.disabled) continue
+    const norm = (s.driver || "").toLowerCase().replace(/[^a-z0-9]/g, "")
+    if (norm === "115open" || norm === "115" || norm === "115pan") {
+      if (!tools.includes("115")) tools.push("115")
+    } else if (
+      norm === "baidunetdisk" ||
+      norm === "baidu" ||
+      norm === "baiduyun"
+    ) {
+      if (!tools.includes("Baidu")) tools.push("Baidu")
+    }
+  }
   return c.json({
     code: 200,
     message: "success",
-    data: [], // Serverless environment: no background download tools
+    data: tools,
   })
 })

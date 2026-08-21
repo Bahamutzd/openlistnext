@@ -103,6 +103,19 @@ export class BaiduDriver implements StorageDriver {
     return clean === "/" ? "/" : clean.replace(/\/$/, "")
   }
 
+  /** 添加百度网盘离线下载任务（由百度服务器后台下载，支持 http/https/ftp/磁力） */
+  async offlineDownload(
+    urls: string[],
+    dstPath: string,
+  ): Promise<{ task_ids: string[]; count: number }> {
+    const savePath = this.baiduPath(dstPath)
+    const tasks = await this.client.addOfflineTask(urls, savePath)
+    return {
+      task_ids: tasks.map((t) => t.task_id).filter(Boolean),
+      count: tasks.length,
+    }
+  }
+
   async list(_virtualPath: string, physicalPath: string): Promise<FileItem[]> {
     const files = await this.client.getFiles(this.baiduPath(physicalPath))
     const items = files.map(baiduFileToFileItem)

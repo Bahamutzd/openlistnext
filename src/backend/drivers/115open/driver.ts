@@ -374,6 +374,29 @@ export class Pan115Driver implements StorageDriver {
     await this.client.copy(dstId, file.fid)
   }
 
+  // ---- Offline download（115 官方离线下载） ----
+
+  /**
+   * 添加离线下载任务（HTTP/magnet/ED2K 由 115 服务器后台下载）。
+   * @param urls 下载地址列表
+   * @param dstPath 目标目录（虚拟路径，如 /movies）
+   */
+  async offlineDownload(
+    urls: string[],
+    dstPath: string,
+  ): Promise<{
+    task_ids: string[]
+    count: number
+  }> {
+    this.budget.used = 0
+    const dstId = await this.resolveFolderId(dstPath)
+    const tasks = await this.client.addOfflineTask(urls, dstId)
+    return {
+      task_ids: tasks.map((t) => t.task_id).filter(Boolean),
+      count: tasks.length,
+    }
+  }
+
   // ---- Upload（OSS 直传：秒传 → 二次校验 → PUT Object） ----
 
   async put(
