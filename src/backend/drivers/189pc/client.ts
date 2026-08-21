@@ -36,6 +36,28 @@ function uuid(): string {
   return crypto.randomUUID()
 }
 
+function isTransient189(status: number, text: string): boolean {
+  if (status === 522 || status === 520 || status === 521 || status >= 500)
+    return true
+  return /error code:\s*52[0-9]|Cloudflare|just a moment/i.test(text || "")
+}
+
+async function fetchWithRetry(
+  url: string,
+  init: RequestInit,
+  attempts = 3,
+): Promise<{ res: Response; text: string }> {
+  let last: { res: Response; text: string } | null = null
+  for (let i = 1; i <= attempts; i++) {
+    const res = await fetch(url, init)
+    const text = await res.text()
+    last = { res, text }
+    if (!isTransient189(res.status, text)) return last
+    if (i < attempts) await new Promise((r) => setTimeout(r, 300 * i))
+  }
+  return last!
+}
+
 function tryJson(text: string): any | null {
   const t = text.trim()
   if (!t.startsWith("{") && !t.startsWith("[")) return null
@@ -222,16 +244,18 @@ export class Pan189PcClient {
       appId: APP_ID,
       accessToken,
     })
-    const res = await fetch(`${API_URL}/getSessionForPC.action?${q}`, {
-      method: "GET",
-      headers: {
-        Accept: "application/json;charset=UTF-8",
-        Referer: WEB_URL,
-        "User-Agent": OPENLIST_UA,
-        "X-Request-ID": uuid(),
+    const { res, text } = await fetchWithRetry(
+      `${API_URL}/getSessionForPC.action?${q}`,
+      {
+        method: "GET",
+        headers: {
+          Accept: "application/json;charset=UTF-8",
+          Referer: WEB_URL,
+          "User-Agent": OPENLIST_UA,
+          "X-Request-ID": uuid(),
+        },
       },
-    })
-    const text = await res.text()
+    )
     const json = tryJson(text)
     const err = apiError(text, json)
     if (err) {
@@ -242,6 +266,11 @@ export class Pan189PcClient {
         return this.refreshToken(retryCount)
       }
       throw new Error(`[189CloudPC] 刷新会话失败: ${err}`)
+    }
+    if (isTransient189(res.status, text)) {
+      throw new Error(
+        `[189CloudPC] 刷新会话失败: 天翼源站瞬时不可达（HTTP ${res.status}）。请稍后刷新重试。`,
+      )
     }
     const sess = parseSession(text)
     if (!sess?.sessionKey) {
@@ -393,16 +422,18 @@ export class Pan189PcClient {
       ...clientSuffix(),
       redirectURL: loginData.toUrl,
     })
-    const sessRes = await fetch(`${API_URL}/getSessionForPC.action?${sessQ}`, {
-      method: "POST",
-      headers: {
-        Accept: "application/json;charset=UTF-8",
-        Referer: WEB_URL,
-        "User-Agent": OPENLIST_UA,
-        "X-Request-ID": uuid(),
+    const { text: sessText } = await fetchWithRetry(
+      `${API_URL}/getSessionForPC.action?${sessQ}`,
+      {
+        method: "POST",
+        headers: {
+          Accept: "application/json;charset=UTF-8",
+          Referer: WEB_URL,
+          "User-Agent": OPENLIST_UA,
+          "X-Request-ID": uuid(),
+        },
       },
-    })
-    const sessText = await sessRes.text()
+    )
     const sessJson = tryJson(sessText)
     const err = apiError(sessText, sessJson)
     if (err) throw new Error(`[189CloudPC] 获取 Session 失败: ${err}`)
@@ -499,8 +530,11 @@ export class Pan189PcClient {
       body = new URLSearchParams(options.form).toString()
     }
 
-    const res = await fetch(fullUrl, { method, headers, body })
-    const text = await res.text()
+    const { res, text } = await fetchWithRetry(fullUrl, {
+      method,
+      headers,
+      body,
+    })
     const json = tryJson(text)
     if (
       text.includes("userSessionBO is null") ||
@@ -513,7 +547,7 @@ export class Pan189PcClient {
     }
     const err = apiError(text, json)
     if (err) throw new Error(`[189CloudPC] ${err}`)
-    if (res.status >= 400 && !json) {
+    if (isTransient189(res.status, text) || (res.status >= 400 && !json)) {
       throw new Error(`[189CloudPC] HTTP ${res.status}: ${text.slice(0, 200)}`)
     }
     return { text, json }
