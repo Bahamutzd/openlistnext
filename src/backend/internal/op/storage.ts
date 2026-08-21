@@ -18,8 +18,6 @@ import {
 import { Cloud189Driver } from "../../drivers/189/driver"
 import { LanzouDriver } from "../../drivers/lanzou/driver"
 import { WebDavDriver } from "../../drivers/webdav/driver"
-import { FtpDriver } from "../../drivers/ftp/driver"
-import { SftpDriver } from "../../drivers/sftp/driver"
 import { Cloud189PcDriver } from "../../drivers/189pc/driver"
 import { StrmDriver } from "../../drivers/strm/driver"
 
@@ -32,6 +30,24 @@ async function getLocalDriver(): Promise<StorageDriver> {
     _localDriver = new LocalDriver()
   }
   return _localDriver
+}
+
+// FTP / SFTP 同样是 Node-only（需要 net socket，依赖 basic-ftp / ssh2，
+// 其中 ssh2 含原生 .node 文件，Workers 构建无法打包），动态加载。
+// 注意：不能像 LocalDriver 那样做全局单例——每个存储的 addition 不同，
+// 实例由 driverCache 按 id_modified 缓存。
+async function getFtpDriver(addition: any): Promise<StorageDriver> {
+  const { FtpDriver } = await import("../../drivers/ftp/driver")
+  const d = new FtpDriver(addition)
+  await d.init?.()
+  return d
+}
+
+async function getSftpDriver(addition: any): Promise<StorageDriver> {
+  const { SftpDriver } = await import("../../drivers/sftp/driver")
+  const d = new SftpDriver(addition)
+  await d.init?.()
+  return d
 }
 
 const driverCache = new Map<string, StorageDriver>()
@@ -326,8 +342,7 @@ export async function getDriver(
       )
     }
     const addition = parseAddition(storageConfig)
-    driver = new FtpDriver(addition)
-    await driver.init?.()
+    driver = await getFtpDriver(addition)
   } else if (normDriver === "sftp" || normDriver === "ssh") {
     // Node-only：需要 net socket（ssh2），Workers 不可用
     if (typeof process === "undefined" || process.release?.name !== "node") {
@@ -336,8 +351,7 @@ export async function getDriver(
       )
     }
     const addition = parseAddition(storageConfig)
-    driver = new SftpDriver(addition)
-    await driver.init?.()
+    driver = await getSftpDriver(addition)
   } else if (normDriver === "189cloudpc" || normDriver === "189pc") {
     const addition = parseAddition(storageConfig)
     driver = new Cloud189PcDriver(addition)

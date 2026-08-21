@@ -17,7 +17,10 @@ async function initNodeFtp() {
     !ftpModule
   ) {
     try {
-      ftpModule = await import("basic-ftp")
+      // 运行时拼接包名：与 sftp 一致，防止 esbuild 静态解析 basic-ftp
+      // （basic-ftp 不含 .node，但保持同样写法以防其依赖变化）
+      const PKG_BASIC_FTP = "basic-" + String.fromCharCode(0x66) + "tp" // "basic-ftp"
+      ftpModule = await import(PKG_BASIC_FTP)
     } catch (e) {}
   }
 }

@@ -17,7 +17,12 @@ async function initNodeSsh() {
     !ssh2Module
   ) {
     try {
-      ssh2Module = await import("ssh2")
+      // 运行时拼接包名：esbuild/wrangler 会对字符串字面量拼接做常量折叠并
+      // 静态解析动态 import，导致把 ssh2（含 .node 原生文件 cpu-features/
+      // sshcrypto）打进 Workers bundle 后构建失败。用 String.fromCharCode
+      // 这类函数调用阻止折叠；该 import 仅 Node 容器模式会执行。
+      const PKG_SSH2 = "ssh" + String.fromCharCode(0x32) // "ssh2"
+      ssh2Module = await import(PKG_SSH2)
     } catch (e) {}
   }
 }
