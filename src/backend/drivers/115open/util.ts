@@ -331,15 +331,31 @@ export class Pan115Client {
     pickCode: string,
     ua: string,
   ): Promise<Pan115DownUrlResp> {
-    return (
-      await this.request(
-        ApiFsDownURL,
-        "POST",
-        undefined,
-        { pick_code: pickCode },
-        ua,
+    const body = await this.request(
+      ApiFsDownURL,
+      "POST",
+      undefined,
+      { pick_code: pickCode },
+      ua,
+    )
+    const data = body?.data
+    if (data && typeof data === "object" && !Array.isArray(data)) {
+      return data as Pan115DownUrlResp
+    }
+    // 115 失败时常返回 data: []；把完整 body 抛给上层，避免静默空对象
+    if (Array.isArray(data) && data.length === 0) {
+      throw new Error(
+        `115 downurl 返回空列表（可能被风控或配额限制，code ${body?.code ?? ""} ${body?.message || ""}）`,
       )
-    )?.data as Pan115DownUrlResp
+    }
+    if (Array.isArray(data) && data.length > 0) {
+      const first = data[0]
+      const id = first?.fid || first?.file_id || pickCode
+      return { [id]: first } as Pan115DownUrlResp
+    }
+    throw new Error(
+      `115 downurl 无直链（code ${body?.code ?? ""} ${body?.message || ""} data=${JSON.stringify(data).slice(0, 180)}）`,
+    )
   }
 
   // ---- Upload（OSS 直传所需 token / init） ----
