@@ -8,6 +8,8 @@ preview_urls = false
 [assets]
 directory = "./dist"
 binding = "ASSETS"
+# /p /d /api 必须先走 Worker，不能被静态资源 SPA fallback 吃掉
+run_worker_first = ["/api/*", "/d/*", "/p/*", "/sd/*", "/dav/*"]
 
 
 [vars]

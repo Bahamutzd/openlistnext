@@ -185,7 +185,14 @@ export class Cloud189PcDriver implements StorageDriver {
     try {
       item.raw_url = await this.client.getDownloadUrl(String(file.id))
     } catch (e: any) {
+      const msg = String(e?.message || e)
+      if (msg.includes("FileNotFound") || msg.includes("file not found")) {
+        throw e
+      }
       console.warn(`[189CloudPC] 获取 ${file.name} 下载地址失败:`, e.message)
+    }
+    if (!item.raw_url) {
+      throw new Error(`[189CloudPC] 获取下载地址失败: ${file.name}`)
     }
     return item
   }

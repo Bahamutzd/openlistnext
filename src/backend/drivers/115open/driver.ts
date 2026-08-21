@@ -277,36 +277,41 @@ export class Pan115Driver implements StorageDriver {
     }
     const file = await this.resolveFile(physicalPath)
     const item = pan115FileToFileItem(file)
-    if (file.fc !== "0" && file.pc) {
-      try {
-        // 链接缓存（Go LinkCacheMode=UA）：同一 文件+UA 复用链接，节省 downurl 配额
-        const cacheKey = `${file.fid}|${OPENLIST_UA}`
-        const cached = this.linkCache.get(cacheKey)
-        if (cached && cached.expire > Date.now()) {
-          item.raw_url = cached.url
-          item.raw_url_headers = { "User-Agent": OPENLIST_UA }
-        } else {
-          if (!this.reserve()) throw new Error("subrequest budget exceeded")
-          const resp = await this.client.downUrl(file.pc, OPENLIST_UA)
-          const entry = resp[file.fid]
-          if (entry?.url?.url) {
-            item.raw_url = entry.url.url
+    if (file.fc !== "0") {
+      if (file.pc) {
+        try {
+          // 链接缓存（Go LinkCacheMode=UA）：同一 文件+UA 复用链接，节省 downurl 配额
+          const cacheKey = `${file.fid}|${OPENLIST_UA}`
+          const cached = this.linkCache.get(cacheKey)
+          if (cached && cached.expire > Date.now()) {
+            item.raw_url = cached.url
             item.raw_url_headers = { "User-Agent": OPENLIST_UA }
-            this.linkCache.set(cacheKey, {
-              url: entry.url.url,
-              expire: Date.now() + Pan115Driver.LINK_TTL_MS,
-            })
+          } else {
+            if (!this.reserve()) throw new Error("subrequest budget exceeded")
+            const resp = await this.client.downUrl(file.pc, OPENLIST_UA)
+            const entry = resp[file.fid]
+            if (entry?.url?.url) {
+              item.raw_url = entry.url.url
+              item.raw_url_headers = { "User-Agent": OPENLIST_UA }
+              this.linkCache.set(cacheKey, {
+                url: entry.url.url,
+                expire: Date.now() + Pan115Driver.LINK_TTL_MS,
+              })
+            }
+          }
+        } catch (e: any) {
+          const msg = String(e?.message || e)
+          if (msg.includes("406")) {
+            console.warn(
+              "[115open] downurl 配额用尽（406）：已使用缓存或稍后重试",
+            )
+          } else {
+            console.warn(`[115open] downUrl warning for ${file.fn}:`, e.message)
           }
         }
-      } catch (e: any) {
-        const msg = String(e?.message || e)
-        if (msg.includes("406")) {
-          console.warn(
-            "[115open] downurl 配额用尽（406）：已使用缓存或稍后重试",
-          )
-        } else {
-          console.warn(`[115open] downUrl warning for ${file.fn}:`, e.message)
-        }
+      }
+      if (!item.raw_url) {
+        throw new Error(`[115] 获取下载地址失败: ${file.fn}`)
       }
     }
     return item

@@ -45,7 +45,7 @@ function isTransient189(status: number, text: string): boolean {
 async function fetchWithRetry(
   url: string,
   init: RequestInit,
-  attempts = 3,
+  attempts = 4,
 ): Promise<{ res: Response; text: string }> {
   let last: { res: Response; text: string } | null = null
   for (let i = 1; i <= attempts; i++) {
@@ -53,7 +53,7 @@ async function fetchWithRetry(
     const text = await res.text()
     last = { res, text }
     if (!isTransient189(res.status, text)) return last
-    if (i < attempts) await new Promise((r) => setTimeout(r, 300 * i))
+    if (i < attempts) await new Promise((r) => setTimeout(r, 400 * i * i))
   }
   return last!
 }
@@ -150,6 +150,46 @@ function parseFileXml(inner: string): Cloud189PcFile {
       smallUrl: xmlTag(inner, "smallUrl"),
       largeUrl: xmlTag(inner, "largeUrl"),
     },
+  }
+}
+
+function itemId(raw: any): string {
+  const v = raw?.id ?? raw?.ID ?? raw?.fileId ?? raw?.folderId
+  return v == null ? "" : String(v)
+}
+
+function looksLikeFile(raw: any): boolean {
+  if (!raw || typeof raw !== "object") return false
+  if (raw.isFolder === 1 || raw.isFolder === "1" || raw.isFolder === true)
+    return false
+  if (raw.md5 || raw.md5Sum) return true
+  if (raw.isFolder === 0 || raw.isFolder === "0" || raw.isFolder === false)
+    return true
+  const size = Number(raw.size ?? raw.fileSize ?? raw.file_size)
+  if (Number.isFinite(size) && size > 0) return true
+  return false
+}
+
+function toPcFile(raw: any): Cloud189PcFile {
+  return {
+    id: itemId(raw),
+    name: String(raw?.name || ""),
+    size: Number(raw?.size ?? raw?.fileSize ?? raw?.file_size ?? 0) || 0,
+    lastOpTime: raw?.lastOpTime,
+    createDate: raw?.createDate,
+    md5: raw?.md5,
+    parentId: raw?.parentId != null ? String(raw.parentId) : undefined,
+    icon: raw?.icon,
+  }
+}
+
+function toPcFolder(raw: any): Cloud189PcFolder {
+  return {
+    id: itemId(raw),
+    name: String(raw?.name || ""),
+    lastOpTime: raw?.lastOpTime,
+    createDate: raw?.createDate,
+    parentId: raw?.parentId != null ? String(raw.parentId) : undefined,
   }
 }
 
@@ -580,18 +620,27 @@ export class Pan189PcClient {
   } {
     if (json?.fileListAO) {
       const ao = json.fileListAO
+      const files = (ao.fileList || []).map(toPcFile).filter((f) => f.id)
+      const folders: Cloud189PcFolder[] = []
+      for (const raw of ao.folderList || []) {
+        // 个别接口会把文件塞进 folderList；有 md5/size 的按文件处理，
+        // 否则点击后会拿文件 ID 去 listFiles，触发 FileNotFound。
+        if (looksLikeFile(raw)) files.push(toPcFile(raw))
+        else folders.push(toPcFolder(raw))
+      }
       return {
-        files: ao.fileList || [],
-        folders: ao.folderList || [],
-        count: ao.count ?? 0,
+        files,
+        folders,
+        count: ao.count ?? files.length + folders.length,
       }
     }
     const files = xmlTags(text, "file")
       .map(parseFileXml)
       .filter((f) => f.id)
+    const fileIds = new Set(files.map((f) => f.id))
     const folders = xmlTags(text, "folder")
       .map(parseFolderXml)
-      .filter((f) => f.id)
+      .filter((f) => f.id && !fileIds.has(f.id))
     const countStr = xmlTag(text, "count")
     const count = Number(countStr || files.length + folders.length)
     return {

@@ -7,7 +7,10 @@ import { resolveShare } from "../internal/op/share"
 let fsPromises: any = null
 let createReadStream: any = null
 
-async function initNodeModules() {
+async function initNodeModules(env?: any) {
+  // Cloudflare Workers 即使开了 nodejs_compat 也有 process.release=node，
+  // 但不能用本地 fs 读网盘文件。有 ASSETS binding 即视为 Workers。
+  if (env?.ASSETS) return
   if (
     typeof process !== "undefined" &&
     process.release?.name === "node" &&
@@ -23,7 +26,7 @@ async function initNodeModules() {
 export const rawRouter = new Hono()
 
 rawRouter.get("/*", async (c) => {
-  await initNodeModules()
+  await initNodeModules(c.env)
 
   const isProxy =
     c.req.query("proxy") === "true" ||
@@ -111,6 +114,9 @@ rawRouter.get("/*", async (c) => {
           )
           const fileItem = await driver.get(reqPath, resolved.physical)
 
+          if (fileItem?.is_dir) {
+            return c.text("Cannot download directory", 400)
+          }
           if (fileItem && fileItem.raw_url) {
             if (isProxy) {
               console.log(
@@ -205,6 +211,10 @@ rawRouter.get("/*", async (c) => {
               return c.redirect(fileItem.raw_url, 302)
             }
           }
+          return c.text(
+            `Download failed: driver '${resolved.storage.driver}' did not return a download URL`,
+            502,
+          )
         } catch (e: any) {
           console.error(
             `[rawRouter] Driver get failed for '${reqPath}':`,
