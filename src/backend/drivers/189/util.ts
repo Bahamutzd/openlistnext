@@ -323,7 +323,7 @@ export class Pan189Client {
       reqBody = new URLSearchParams(options.body).toString()
     }
 
-    const res = await fetch(urlObj.toString(), {
+    let res = await fetch(urlObj.toString(), {
       method,
       headers,
       body: reqBody,
@@ -331,12 +331,28 @@ export class Pan189Client {
 
     this.updateCookie(res.headers.get("set-cookie"))
 
+    // 5xx / 522（源站瞬时故障）自动重试，最多 3 次退避
+    if (res.status >= 500) {
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        await new Promise((r) => setTimeout(r, 300 * attempt))
+        res = await fetch(urlObj.toString(), {
+          method,
+          headers,
+          body: reqBody,
+        })
+        this.updateCookie(res.headers.get("set-cookie"))
+        if (res.status < 500) break
+      }
+    }
+
     const text = await res.text()
     let data: any
     try {
       data = JSON.parse(text)
     } catch {
-      throw new Error(`[189Cloud] 非预期响应: ${text.slice(0, 200)}`)
+      throw new Error(
+        `[189Cloud] 非预期响应: ${text.slice(0, 200)}（HTTP ${res.status}）`,
+      )
     }
 
     // 检查 SessionKey 过期

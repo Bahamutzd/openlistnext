@@ -30,17 +30,23 @@
   },
   "Strm": {
     "paths": "路径映射",
-    "paths-tips": "每行一个：源路径=目标路径（如 /strm=/mnt/media）",
+    "paths-tips": "每行一个。格式与原版 OpenList 一致：`虚拟根名:目标存储挂载路径`（如 电影:/115网盘/115影视），或裸路径（自动取最后一段作根名）",
     "siteUrl": "站点 URL",
-    "siteUrl-tips": "strm 文件内容的前缀 URL",
+    "siteUrl-tips": "strm 文件内容的前缀 URL（默认本站 /api 地址）",
+    "pathPrefix": "路径前缀",
+    "pathPrefix-tips": "strm 内容路径前缀（默认 /d）",
     "filterFileTypes": "过滤文件后缀",
-    "filterFileTypes-tips": "要过滤的文件后缀（默认 strm）",
+    "filterFileTypes-tips": "支持转成 .strm 的媒体后缀（默认媒体扩展名列表）",
     "downloadFileTypes": "跟随下载后缀",
-    "downloadFileTypes-tips": "需要跟随下载的文件后缀（默认 ass）",
+    "downloadFileTypes-tips": "需要跟随下载的文件后缀（默认 ass,srt,vtt,sub,strm，字幕等小文件原样暴露）",
+    "minFileSize": "最小文件大小(MB)",
+    "minFileSize-tips": "过滤掉小于该大小的文件（0 关闭）",
     "encodePath": "编码路径",
     "encodePath-tips": "是否编码 strm 内容中的路径",
     "withoutUrl": "不含 URL 前缀",
-    "withoutUrl-tips": "strm 文件内容是否不含 URL 前缀"
+    "withoutUrl-tips": "strm 文件内容是否不含 URL 前缀",
+    "withSign": "附加签名",
+    "withSign-tips": "是否在 strm 链接后附加 sign（本项目 sign_all 默认关，暂只附加占位）"
   },
   "SFTP": {
     "host": "服务器地址",
