@@ -7,6 +7,9 @@ import {
   CapacityResp189,
   AppConfResp189,
   EncryptConfResp189,
+  UploadInitResp189,
+  UploadUrlsResp189,
+  UploadCommitResp189,
 } from "./types"
 import {
   rsaEncode,
@@ -574,6 +577,83 @@ export class Pan189Client {
     return this.request<CapacityResp189>(
       "https://cloud.189.cn/api/portal/getUserSizeInfo.action",
       { method: "GET" },
+    )
+  }
+
+  // ---- 上传（分片直传，对应 OpenList 189 驱动） ----
+
+  /**
+   * 初始化上传：fileDataExists=true 表示秒传成功
+   */
+  async uploadInit(params: {
+    parentFolderId: string
+    fileName: string
+    fileSize: number
+    fileMd5: string
+    sliceSize: number
+    sliceMd5: string
+    lastWriteTime?: string
+  }): Promise<UploadInitResp189> {
+    return this.request<UploadInitResp189>(
+      "https://cloud.189.cn/api/open/file/uploadFile.action",
+      {
+        method: "POST",
+        params: {
+          parentFolderId: params.parentFolderId,
+          fileName: params.fileName,
+          fileSize: String(params.fileSize),
+          fileMd5: params.fileMd5,
+          sliceSize: String(params.sliceSize),
+          sliceMd5: params.sliceMd5,
+          lastWriteTime: params.lastWriteTime || "",
+          opType: "1",
+          flag: "1",
+        },
+      },
+    )
+  }
+
+  /**
+   * 获取分片上传 URL 列表（uploadUrls: 分片序号 → requestURL/requestHeader）
+   */
+  async getUploadUrls(params: {
+    uploadFileId: string
+    partSize: number
+    partCount: number
+  }): Promise<UploadUrlsResp189> {
+    return this.request<UploadUrlsResp189>(
+      "https://cloud.189.cn/api/open/file/getUploadUrls.action",
+      {
+        method: "GET",
+        params: {
+          uploadFileId: params.uploadFileId,
+          partSize: String(params.partSize),
+          partCount: String(params.partCount),
+          folderId: "0",
+        },
+      },
+    )
+  }
+
+  /**
+   * 上传完成提交（通知 189 服务端所有分片已就绪）
+   */
+  async commitUpload(params: {
+    uploadFileId: string
+    fileSize: number
+    partEtagList: Array<{ partNumber: number; partEtag: string }>
+  }): Promise<UploadCommitResp189> {
+    return this.request<UploadCommitResp189>(
+      "https://cloud.189.cn/api/open/file/uploadFileCommit.action",
+      {
+        method: "POST",
+        params: {
+          uploadFileId: params.uploadFileId,
+          fileSize: String(params.fileSize),
+          partEtagList: JSON.stringify(params.partEtagList),
+          opType: "1",
+        },
+      },
     )
   }
 }

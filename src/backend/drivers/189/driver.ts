@@ -6,6 +6,7 @@ import {
   calcFileType,
 } from "../../internal/driver/base"
 import { sortFileItems } from "../../internal/driver/sort"
+import { md5 } from "../../pkg/crypto"
 import { Cloud189Addition, FileItem189, FolderItem189 } from "./types"
 import { Pan189Client } from "./util"
 
@@ -304,9 +305,105 @@ export class Cloud189Driver implements StorageDriver {
     await this.client.copy(String(file.id), isDir, file.name, targetParentId)
   }
 
-  async put(): Promise<void> {
-    throw new Error(
-      "[189Cloud] Cloudflare Worker 环境暂不支持直接流式写入，请使用客户端或网页端进行大文件上传",
-    )
+  async put(
+    _virtualPath: string,
+    physicalPath: string,
+    content: Buffer,
+  ): Promise<void> {
+    if (content.length < 1) {
+      throw new Error("[189Cloud] 不允许上传空文件")
+    }
+    this.budget.used = 0
+    const segs = String(physicalPath || "")
+      .split("/")
+      .filter(Boolean)
+    const fileName = segs.pop() || "file"
+    const parentPath = "/" + segs.join("/")
+    const parentId = await this.resolveFolderId(parentPath)
+
+    const fileSize = content.length
+    const fileMd5 = md5(content)
+    const sliceSize = Math.min(4 * 1024 * 1024, fileSize)
+    const sliceMd5 = md5(content.subarray(0, sliceSize))
+    const lastWriteTime = new Date().toISOString().replace(/\.\d{3}Z$/, "Z")
+
+    // 1. 初始化（秒传检测）
+    const initResp = await this.client.uploadInit({
+      parentFolderId: parentId,
+      fileName,
+      fileSize,
+      fileMd5,
+      sliceSize,
+      sliceMd5,
+      lastWriteTime,
+    })
+    if (initResp.data?.fileDataExists) {
+      return // 秒传成功
+    }
+    if (!initResp.data?.uploadFileId || !initResp.data?.uploadHost) {
+      throw new Error(
+        `[189Cloud] 上传初始化失败: ${initResp.res_message || "缺少 uploadFileId"}`,
+      )
+    }
+    const { uploadFileId, uploadHost } = initResp.data
+
+    // 2. 分片（默认 4MB；大文件每片 4MB，但不超过 1000 片）
+    const partSize = Math.max(4 * 1024 * 1024, Math.ceil(fileSize / 1000))
+    const partCount = Math.ceil(fileSize / partSize)
+    const urlsResp = await this.client.getUploadUrls({
+      uploadFileId,
+      partSize,
+      partCount,
+    })
+    const uploadUrls = urlsResp.uploadUrls
+    if (!uploadUrls) {
+      throw new Error("[189Cloud] 获取分片上传地址失败")
+    }
+
+    const partEtags: Array<{ partNumber: number; partEtag: string }> = []
+    const uploadHostClean = uploadHost.replace(/\/+$/, "")
+    for (let i = 0; i < partCount; i++) {
+      const start = i * partSize
+      const end = Math.min(start + partSize, fileSize)
+      const part = content.subarray(start, end)
+      const partMd5 = md5(part)
+
+      const partInfo = uploadUrls[String(i)] || uploadUrls[String(i + 1)]
+      if (!partInfo?.requestURL) {
+        throw new Error(`[189Cloud] 缺少第 ${i} 片上传地址`)
+      }
+      // requestHeader 形如 "Content-Type: application/octet-stream; ..."
+      const headers: Record<string, string> = {
+        "Content-Type": "application/octet-stream",
+        "Content-Length": String(part.length),
+      }
+      if (partInfo.requestHeader) {
+        for (const h of partInfo.requestHeader.split("\r\n")) {
+          const idx = h.indexOf(":")
+          if (idx > 0) headers[h.slice(0, idx).trim()] = h.slice(idx + 1).trim()
+        }
+      }
+      const partUrl = partInfo.requestURL.startsWith("http")
+        ? partInfo.requestURL
+        : `https://${uploadHostClean}${partInfo.requestURL}`
+      const partRes = await fetch(partUrl, {
+        method: "PUT",
+        headers,
+        body: part as unknown as BodyInit,
+      })
+      if (!partRes.ok) {
+        throw new Error(
+          `[189Cloud] 分片 ${i} 上传失败 (HTTP ${partRes.status})`,
+        )
+      }
+      partEtags.push({ partNumber: i + 1, partEtag: partMd5 })
+    }
+
+    // 3. 提交
+    await this.client.commitUpload({
+      uploadFileId,
+      fileSize,
+      partEtagList: partEtags,
+    })
   }
 }

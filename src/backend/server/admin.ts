@@ -741,8 +741,7 @@ const driverConfigs: Record<string, any> = {
       {
         name: "access_token",
         type: "string",
-        default:
-          "e4mvi.43f51ee687247d07f386048e903ae6b7.3a9175e14e8e4b254ab81462866f9111e2bdc9984324da30a2b8e2bdfad74ff1",
+        default: "",
         required: true,
         help: "访问令牌（必填）。通过 115 开放平台获取；失效时自动用 refresh_token 刷新并持久化。",
       },

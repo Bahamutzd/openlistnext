@@ -123,3 +123,22 @@ export interface UploadUrlsResp189 {
   code: string
   uploadUrls?: Record<string, UploadPart189>
 }
+
+/** 189 分片上传初始化响应 */
+export interface UploadInitResp189 {
+  res_code: number
+  res_message: string
+  data?: {
+    fileDataExists: boolean
+    fileSize: number
+    uploadFileId: string
+    uploadHost: string
+  }
+}
+
+/** 189 分片上传完成提交响应 */
+export interface UploadCommitResp189 {
+  res_code: number
+  res_message: string
+  file?: FileItem189
+}
