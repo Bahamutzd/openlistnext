@@ -12,7 +12,7 @@
 - [x] 黑暗模式 (Dark mode)
 - [x] 国际化 (i18n)
 - [x] 受保护的路由（密码保护和认证） (Protected routes) - _Implemented for admin login_
-- [ ] WebDAV (WebDAV) - _Not supported in JS backend yet_
+- [x] WebDAV (WebDAV) - _Implemented: /dav server (Basic Auth + PROPFIND/GET/PUT/MKCOL/DELETE/MOVE/COPY) + WebDav storage driver_
 - [x] Docker 部署 (Docker deploy) - _Supported via container_
 - [x] Cloudflare Workers / Vercel 代理 - _Supported via entrypoints_
 - [x] 文件/文件夹打包下载 (File/folder archive download) - _Implemented via browser ZIP stream_
@@ -41,7 +41,7 @@
 - [ ] PikPak
 - [ ] Seafile
 - [ ] 又拍云对象存储 (Upyun)
-- [ ] WebDAV
+- [x] WebDAV - _Storage driver: mount external WebDAV (Nextcloud / 群晖 / OpenList /dav)_
 - [ ] Teambition
 - [ ] MediaFire
 - [ ] 分秒帧 (Fenmiao)

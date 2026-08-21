@@ -117,14 +117,25 @@ export async function handleGet(
     const storage = resolved.storage
     const policy = (storage as any)?.webdav_policy || "302_redirect"
 
-    // 直链仅在显式配置 302_redirect 且存在 raw_url 时使用；
-    // 其余情况（Local / 无直链 / 默认）走本站 /api/p 代理，保证 Range 与鉴权。
+    // 下载策略：
+    //  - 302_redirect：优先直链（raw_url 存在且为绝对 URL 时才 302）
+    //  - use_proxy_url：302 到本站 /api/p 代理
+    //  - native_proxy（默认）：直接流式透传 /api/p 响应（支持 Range）
+    // 仅当策略为 302_redirect 时尝试直链，其余一律走代理，保证鉴权与 Range。
     if (policy === "302_redirect" && rawUrl) {
       const urlStr = String(rawUrl)
       if (/^https?:\/\//i.test(urlStr)) {
         return Response.redirect(urlStr, 302)
       }
       console.warn("[dav] rawUrl not absolute, falling back to proxy:", urlStr)
+    }
+    if (policy === "use_proxy_url") {
+      // 302 到代理 URL
+      const host = c.req.header("host") || ""
+      const protocol = c.req.header("x-forwarded-proto") || "http"
+      const proxyPath =
+        "/api/p" + (virtualPath.startsWith("/") ? "" : "/") + virtualPath
+      return Response.redirect(`${protocol}://${host}${proxyPath}`, 302)
     }
 
     // 本地文件或其它无直链驱动 → 走 raw 路由的代理下载（支持 Range / HEAD）

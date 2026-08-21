@@ -224,6 +224,21 @@ const COMMON_FIELDS = [
   { name: "order", type: "number", default: "0", required: false, help: "" },
   { name: "remark", type: "string", default: "", required: false, help: "" },
   { name: "cache_expiration", type: "number", default: "30", required: false },
+  {
+    name: "webdav_policy",
+    type: "select",
+    options: "302_redirect,use_proxy_url,native_proxy",
+    default: "302_redirect",
+    required: false,
+    help: "WebDAV 下载策略：302 直链 / 代理 URL / 本地中转",
+  },
+  {
+    name: "web_proxy",
+    type: "bool",
+    default: "false",
+    required: false,
+    help: "Web 代理",
+  },
 ]
 
 const driverConfigs: Record<string, any> = {

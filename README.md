@@ -22,7 +22,9 @@ OpenListNext 是 [OpenList](https://github.com/OpenListTeam/OpenList) 的定制�
 - 🔗 文件永久链接、直链下载、分享链接（含提取码）
 - 🌙 黑暗模式、国际化（中 / 英）
 - 🔐 JWT 认证、密码保护、后台管理
-- ☁️ 多网盘驱动：夸克网盘、阿里云盘、Google Drive、OneDrive、百度网盘、123 云盘、本地文件系统
+- 🌐 **WebDAV 服务端**（`/dav`）：Windows 资源管理器 / rclone / RaiDrive 可直接挂载
+- 🔌 **WebDAV 存储驱动**：可挂载外部 WebDAV（Nextcloud / 群晖 / 另一台 OpenList 等）
+- ☁️ 多网盘驱动：夸克网盘、阿里云盘、Google Drive、OneDrive、百度网盘、123 云盘、WebDAV、本地文件系统
 - ⚡ 边缘部署：Cloudflare Workers / Vercel / Serverless 开箱即用
 
 ---
@@ -44,13 +46,14 @@ OpenListNext 是 [OpenList](https://github.com/OpenListTeam/OpenList) 的定制�
 │  ├── /api/share  分享管理                            │
 │  ├── /api/task   任务管理                            │
 │  ├── /api/raw · /d · /p · /sd  下载与代理            │
-│  └── /api/mcp    MCP 协议支持                        │
+│  ├── /api/mcp    MCP 协议支持                        │
+│  └── /dav       WebDAV 服务端（Basic Auth + 读写）   │
 └──────────────────────┬──────────────────────────────┘
                        │ 存储驱动接口 (StorageDriver)
 ┌──────────────────────▼──────────────────────────────┐
 │     存储驱动层：Local · Quark · AliyundriveOpen ·    │
 │           GoogleDrive · Onedrive · BaiduNetdisk      │
-│                   · 123Pan                           │
+│                   · 123Pan · WebDav                  │
 └──────────────────────┬──────────────────────────────┘
                        │ 持久化
         ┌──────────────┴───────────────┐
@@ -105,6 +108,44 @@ npm run dev
 ### 本地文件系统（Mock / Local FS）
 
 本地驱动将文件上传、读取、下载直接映射到 `public_data/` 目录；设置与存储配置持久化为 `public_data/db.json`。
+
+### 🌐 WebDAV
+
+OpenListNext 内置 **WebDAV 服务端** 与 **WebDAV 存储驱动**：
+
+#### 作为 WebDAV 服务器（被挂载）
+
+- 地址：`http(s)://<你的域名>/dav`
+- 认证：HTTP Basic，使用后台「用户管理」中的用户名 / 密码
+- 权限：`webdav_read`（浏览 / 下载）、`webdav_manage`（上传 / 建目录 / 重命名 / 删除 / 移动 / 复制）两个权限位，管理员默认全开
+- 用户 `base_path` 生效：`base_path=/movie` 的用户挂载后只能看到 `/movie`
+- 支持方法：`OPTIONS` / `PROPFIND` / `GET` / `HEAD` / `PUT` / `MKCOL` / `DELETE` / `MOVE` / `COPY` / `LOCK` / `UNLOCK`
+- 兼容：Windows「映射网络驱动器」、rclone、RaiDrive、FE File Explorer 等
+
+```bash
+# rclone 挂载示例
+rclone config create myopenlist webdav url http://localhost:3000/dav vendor other user admin pass admin
+rclone lsd myopenlist:
+```
+
+下载策略由存储的 `webdav_policy` 控制：
+
+| 策略            | 行为                                |
+| --------------- | ----------------------------------- |
+| `302_redirect`  | 有直链时 302 到直链（默认）         |
+| `use_proxy_url` | 302 到本站 `/api/p` 代理            |
+| `native_proxy`  | 直接流式中转（支持 Range / 大文件） |
+
+> ⚠️ 上传限制：单文件默认上限 100MB（WebDAV PUT 为整包进内存）；Cloudflare Workers 环境限制更严，建议大文件走网页上传。
+
+#### 作为 WebDAV 客户端（挂载外部 WebDAV）
+
+后台「存储管理」添加 `WebDav` 驱动：
+
+- `address`：远端地址，如 `https://nextcloud.example.com/remote.php/dav` 或另一台 OpenList 的 `/dav`
+- `username` / `password`：Basic 认证凭据
+- `root_folder_path`：远端根目录（默认 `/`）
+- `vendor`：`other` 或 `sharepoint`
 
 ---
 
