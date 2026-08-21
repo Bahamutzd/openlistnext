@@ -16,17 +16,28 @@
     "tls_insecure_skip_verify-tips": "Skip TLS certificate verification"
   },
   "189CloudPC": {
+    "login_type": "Login type",
+    "login_type-tips": "Password or QR code",
     "access_token": "Access token",
-    "access_token-tips": "accessToken login mode, preferred over username/password",
+    "access_token-tips": "Preferred: refresh session via access_token",
+    "refresh_token": "Refresh token",
+    "refresh_token-tips": "Clear this field to switch accounts",
     "username": "Username",
     "username-tips": "Phone number / account",
     "password": "Password",
-    "cookie": "Cookie",
-    "cookie-tips": "Optional, for captcha",
+    "validate_code": "Captcha",
     "root_folder_id": "Root folder ID",
     "root_folder_id-tips": "Default -11 (personal cloud root)",
     "order_by": "Order by",
-    "order_direction": "Order direction"
+    "order_direction": "Order direction",
+    "type": "Cloud type",
+    "type-tips": "personal / family",
+    "family_id": "Family ID",
+    "family_id-tips": "Leave empty to auto detect",
+    "upload_method": "Upload method",
+    "family_transfer": "Family transfer",
+    "rapid_upload": "Rapid upload",
+    "no_use_ocr": "Disable OCR"
   },
   "Strm": {
     "paths": "Path mappings",

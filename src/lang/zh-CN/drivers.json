@@ -16,17 +16,28 @@
     "tls_insecure_skip_verify-tips": "跳过 TLS 证书校验"
   },
   "189CloudPC": {
+    "login_type": "登录方式",
+    "login_type-tips": "密码登录或扫码登录",
     "access_token": "访问令牌",
-    "access_token-tips": "accessToken 登录模式，优先于账号密码",
+    "access_token-tips": "优先用 access_token 刷新 session",
+    "refresh_token": "刷新令牌",
+    "refresh_token-tips": "换账号请清空此字段",
     "username": "用户名",
     "username-tips": "手机号 / 账号",
     "password": "密码",
-    "cookie": "Cookie",
-    "cookie-tips": "可选，遇验证码时填写",
+    "validate_code": "验证码",
     "root_folder_id": "根目录 ID",
     "root_folder_id-tips": "默认为 -11（个人云根目录）",
     "order_by": "排序字段",
-    "order_direction": "排序方向"
+    "order_direction": "排序方向",
+    "type": "云类型",
+    "type-tips": "个人云 / 家庭云",
+    "family_id": "家庭云 ID",
+    "family_id-tips": "可留空自动获取",
+    "upload_method": "上传方式",
+    "family_transfer": "家庭云转存",
+    "rapid_upload": "秒传",
+    "no_use_ocr": "不使用 OCR"
   },
   "Strm": {
     "paths": "路径映射",

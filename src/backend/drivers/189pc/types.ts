@@ -1,18 +1,55 @@
-// 189CloudPC 驱动配置类型（复用 189 驱动 + access_token）
+// 189CloudPC 配置与协议类型（对齐原版 OpenList drivers/189pc）
 
 export interface Cloud189PcAddition {
-  /** 手机号 / 账号（access_token 缺失时用账号密码登录） */
+  login_type?: string
   username?: string
-  /** 密码 */
   password?: string
-  /** access_token（accessToken 登录模式，优先于账号密码） */
+  validate_code?: string
   access_token?: string
-  /** Cookie（可选） */
+  refresh_token?: string
   cookie?: string
-  /** 根文件夹 ID，默认 -11 */
   root_folder_id?: string
-  /** 排序字段 */
   order_by?: string
-  /** 排序方向 */
   order_direction?: string
+  type?: string
+  family_id?: string
+  upload_method?: string
+  upload_thread?: string
+  family_transfer?: boolean
+  rapid_upload?: boolean
+  no_use_ocr?: boolean
+}
+
+export interface Cloud189PcSession {
+  loginName?: string
+  sessionKey: string
+  sessionSecret: string
+  familySessionKey?: string
+  familySessionSecret?: string
+  accessToken?: string
+  refreshToken?: string
+}
+
+export interface Cloud189PcFile {
+  id: string
+  name: string
+  size: number
+  lastOpTime?: string
+  createDate?: string
+  md5?: string
+  parentId?: string
+  icon?: { smallUrl?: string; largeUrl?: string }
+}
+
+export interface Cloud189PcFolder {
+  id: string
+  name: string
+  lastOpTime?: string
+  createDate?: string
+  parentId?: string
+}
+
+export interface Cloud189PcTokenUpdate {
+  access_token?: string
+  refresh_token?: string
 }

@@ -354,7 +354,26 @@ export async function getDriver(
     driver = await getSftpDriver(addition)
   } else if (normDriver === "189cloudpc" || normDriver === "189pc") {
     const addition = parseAddition(storageConfig)
-    driver = new Cloud189PcDriver(addition)
+    driver = new Cloud189PcDriver(addition, async (tokens) => {
+      try {
+        const db = await getDb()
+        const st = (db.storages || []).find(
+          (s: any) => s.id === storageConfig?.id,
+        )
+        if (!st) return
+        const stAddition =
+          typeof st.addition === "string"
+            ? JSON.parse(st.addition || "{}")
+            : st.addition || {}
+        if (tokens.access_token) stAddition.access_token = tokens.access_token
+        if (tokens.refresh_token)
+          stAddition.refresh_token = tokens.refresh_token
+        st.addition = JSON.stringify(stAddition)
+        await saveDb(db)
+      } catch (e) {
+        console.warn("[189CloudPC] failed to persist token:", e)
+      }
+    })
     await driver.init?.()
   } else if (normDriver === "strm") {
     const addition = parseAddition(storageConfig)
