@@ -208,6 +208,7 @@ adminRouter.get("/driver/names", (c) => {
       "ThunderExpert",
       "189Cloud",
       "Lanzou",
+      "WebDav",
     ],
   })
 })
@@ -1226,6 +1227,54 @@ const driverConfigs: Record<string, any> = {
       no_upload: false,
       need_ms: false,
       default_root: "-1",
+    },
+  },
+  WebDav: {
+    name: "WebDav",
+    default_mount_path: "/webdav",
+    common: COMMON_FIELDS,
+    additional: [
+      {
+        name: "address",
+        type: "string",
+        default: "",
+        required: true,
+        help: "远端 WebDAV 服务地址，如 https://example.com/dav",
+      },
+      { name: "username", type: "string", default: "", required: false },
+      { name: "password", type: "string", default: "", required: false },
+      {
+        name: "root_folder_path",
+        type: "string",
+        default: "/",
+        required: false,
+        help: "远端根目录，默认 /",
+      },
+      {
+        name: "vendor",
+        type: "select",
+        options: "other,sharepoint",
+        default: "other",
+        required: false,
+        help: "供应商：SharePoint 需要额外处理",
+      },
+      {
+        name: "tls_insecure_skip_verify",
+        type: "bool",
+        default: "false",
+        required: false,
+        help: "跳过 TLS 证书校验（仅 Node 容器生效）",
+      },
+    ],
+    config: {
+      name: "WebDav",
+      local_sort: true,
+      only_local: false,
+      only_proxy: false,
+      no_cache: false,
+      no_upload: false,
+      need_ms: false,
+      default_root: "/",
     },
   },
 }

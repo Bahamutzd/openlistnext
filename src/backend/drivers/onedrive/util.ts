@@ -61,13 +61,22 @@ export async function requestApi<T>(
   data?: any,
   noRetry?: boolean,
 ): Promise<T> {
+  const isBufferBody = Buffer.isBuffer(data)
   const init: RequestInit = {
     method: method.toUpperCase(),
     headers: {
       Authorization: `Bearer ${d.accessToken}`,
-      ...(data !== undefined ? { "Content-Type": "application/json" } : {}),
+      ...(data !== undefined && !isBufferBody
+        ? { "Content-Type": "application/json" }
+        : {}),
     },
-    ...(data !== undefined ? { body: JSON.stringify(data) } : {}),
+    ...(data !== undefined
+      ? {
+          body: isBufferBody
+            ? (data as unknown as BodyInit)
+            : JSON.stringify(data),
+        }
+      : {}),
   }
   const res = await fetch(url, init)
   if (!res.ok) {

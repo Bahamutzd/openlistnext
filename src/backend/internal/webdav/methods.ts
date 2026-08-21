@@ -185,9 +185,20 @@ export async function handleGet(
       respHeaders.set("Content-Range", upstream.headers.get("content-range")!)
     }
     if (head) {
-      // HEAD 只透传头部，不返回 body
+      // HEAD：只透传头部，不返回 body
       return new Response(null, {
         status: upstream.status,
+        headers: respHeaders,
+      })
+    }
+    if (upstream.bodyUsed) {
+      // body 已被上方探测消费（非 Buffer JSON 的文本）→ 重新 fetch 流式透传
+      const retry = await fetch(`${protocol}://${host}${proxyPath}`, {
+        method: "GET",
+        headers: c.req.header("Range") ? { Range: c.req.header("Range")! } : {},
+      })
+      return new Response(retry.body, {
+        status: retry.status,
         headers: respHeaders,
       })
     }
@@ -216,6 +227,16 @@ export async function handlePut(
     const max = 100 * 1024 * 1024
     if (bytes > max) {
       return davError(413, "File too large; use the web upload instead")
+    }
+    // 覆盖已有文件：驱动层 put 可能不支持覆盖（如 OneDrive 409），先删再写
+    try {
+      await getItem(virtualPath)
+      // 已存在 → 先删除
+      const dir = virtualPath.split("/").slice(0, -1).join("/") || "/"
+      const name = virtualPath.split("/").filter(Boolean).pop() || ""
+      await removeItems(dir, [name])
+    } catch {
+      // 不存在 → 直接写入
     }
     await putItem(virtualPath, Buffer.from(buf))
     return new Response(null, { status: 201 })
@@ -250,12 +271,14 @@ export async function handleDelete(
   if (!canDavWrite(user)) return davError(403)
   const virtualPath = toVirtualPath(reqPath, user)
   try {
+    // removeItems(dir, names) 内部会拼 dir/name，这里传 dir + [最后一段]
     const dir = virtualPath.split("/").slice(0, -1).join("/") || "/"
     const name = virtualPath.split("/").filter(Boolean).pop() || ""
     await removeItems(dir, [name])
     return new Response(null, { status: 204 })
   } catch (e: any) {
-    return davError(404)
+    console.error("[dav] DELETE failed:", e.message)
+    return davError(404, e.message || "Not found")
   }
 }
 

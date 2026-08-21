@@ -17,6 +17,7 @@ import {
 } from "../../drivers/thunder/driver"
 import { Cloud189Driver } from "../../drivers/189/driver"
 import { LanzouDriver } from "../../drivers/lanzou/driver"
+import { WebDavDriver } from "../../drivers/webdav/driver"
 
 // LocalDriver is not available in Cloudflare Workers (no fs module).
 // When running in Node.js container mode, import dynamically on first use.
@@ -309,6 +310,10 @@ export async function getDriver(
       }
     })
     await driver.init?.()
+  } else if (normDriver === "webdav" || normDriver === "dav") {
+    const addition = parseAddition(storageConfig)
+    driver = new WebDavDriver(addition)
+    await driver.init?.()
   } else {
     throw new Error(
       "failed get driver: unsupported driver '" + driverName + "'",
@@ -460,7 +465,11 @@ export async function removeItems(dir: string, names: string[]): Promise<void> {
       throw new Error("failed get storage: storage not found")
     }
     const driver = await getDriver(resolved.storage!.driver, resolved.storage)
-    await driver.remove(itemVirtual, resolved.physical!, [name])
+    // driver.remove 契约：physicalPath 是父目录物理路径，names 是子项名
+    // 这里传父目录的物理路径（resolved.physical 去掉最后一段文件名）
+    const parentPhysical =
+      resolved.physical!.split("/").slice(0, -1).join("/") || "/"
+    await driver.remove(itemVirtual, parentPhysical, [name])
   }
 }
 
