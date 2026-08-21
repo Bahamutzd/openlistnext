@@ -21,7 +21,7 @@ export default defineConfig({
     devServer({
       entry: "src/backend/index.ts",
       exclude: [
-        /^\/(?!api\/|d\/|sd\/|p\/).*/,
+        /^\/(?!api\/|d\/|sd\/|p\/|dav\/).*/,
         /^\/assets\/.*/,
         /^\/favicon.ico$/,
         /^\/manifest.json$/,

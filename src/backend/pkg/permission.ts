@@ -76,3 +76,11 @@ export function canCopy(user?: UserPermissionObj | null): boolean {
 export function canRemove(user?: UserPermissionObj | null): boolean {
   return can(user, PermissionBit.DELETE)
 }
+
+export function canWebdavRead(user?: UserPermissionObj | null): boolean {
+  return can(user, PermissionBit.WEBDAV_READ)
+}
+
+export function canWebdavManage(user?: UserPermissionObj | null): boolean {
+  return can(user, PermissionBit.WEBDAV_MANAGE)
+}

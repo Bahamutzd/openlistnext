@@ -1,6 +1,7 @@
 import { Hono } from "hono"
 import { setupRouter } from "./server/router"
 import { rawRouter } from "./server/raw"
+import { davRouter } from "./server/dav"
 import { setEnvCtx } from "./internal/model/db"
 
 const app = new Hono()
@@ -28,6 +29,10 @@ app.route("/api", api)
 app.route("/d", rawRouter)
 app.route("/sd", rawRouter)
 app.route("/p", rawRouter)
+
+// WebDAV 服务端：根路径 /dav（兼容原版 OpenList），/api/dav 作为别名
+app.route("/dav", davRouter)
+app.route("/api/dav", davRouter)
 
 // Catch-all handler for static assets & SPA frontend serving via Cloudflare Assets
 app.all("*", async (c) => {

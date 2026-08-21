@@ -9,10 +9,10 @@
   "description": "A new AList Fork",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/openlistnext/openlistnext.git"
+    "url": "git+https://github.com/Bahamutzd/openlistnext.git"
   },
   "bugs": {
-    "url": "https://github.com/openlistnext/openlistnext/issues"
+    "url": "https://github.com/Bahamutzd/openlistnext/issues"
   },
   "files": [
     "dist"
