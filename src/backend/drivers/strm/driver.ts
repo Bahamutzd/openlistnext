@@ -114,10 +114,43 @@ export class StrmDriver implements StorageDriver {
     return { key, sub }
   }
 
+  /**
+   * 生成某个 .strm 虚拟文件的 strm 文本内容（对齐原版 getLink）。
+   * @param virtualPath strm 存储内的虚拟路径（如 /影视/阿凡达.strm）
+   * @param apiBase 本站 API 地址（siteUrl 为空时使用）
+   */
+  strmContentFor(virtualPath: string, apiBase: string): string {
+    // 解析虚拟路径 → 目标存储真实路径（去掉 .strm 后缀）
+    const clean = cleanPath(virtualPath)
+    const { key, sub } = this.getRootAndPath(clean)
+    const entries = this.pathMap.filter((p) => p.key === key)
+    if (entries.length === 0) {
+      throw new Error("strm path not found")
+    }
+    // 目标真实路径 = 第一个映射的目标挂载 + 去掉 .strm 的子路径
+    let subNoStrm = sub
+    if (subNoStrm.endsWith(".strm")) {
+      subNoStrm = subNoStrm.slice(0, -".strm".length)
+    }
+    const targetPath =
+      cleanPath(entries[0].dst) + (subNoStrm ? `/${subNoStrm}` : "")
+    return this.buildStrmContent(apiBase, targetPath)
+  }
+
   /** 生成 strm 文件内容：本站 /api/p + 编码路径（对齐原版 getLink） */
-  private buildStrmContent(apiBase: string, targetPath: string): string {
+  buildStrmContent(apiBase: string, targetPath: string): string {
     const a = this.addition
-    let finalPath = a.encodePath !== false ? encodeURI(targetPath) : targetPath
+    // 对齐原版 EncodePath(path, true)：逐段 PathEscape（保留 /，编码中文/?/#/% 等）
+    let finalPath = targetPath
+    if (a.encodePath !== false) {
+      finalPath =
+        "/" +
+        String(targetPath)
+          .split("/")
+          .filter(Boolean)
+          .map((seg) => encodeURIComponent(seg))
+          .join("/")
+    }
     if (!finalPath.startsWith("/")) finalPath = "/" + finalPath
 
     const pathPrefix = a.pathPrefix || "/d"

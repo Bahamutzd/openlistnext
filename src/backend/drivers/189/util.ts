@@ -19,6 +19,10 @@ import {
   randomNoCache,
 } from "./crypto"
 
+/** 与原版 OpenList base.UserAgentNT 一致的 UA（189 服务端可能按 UA 识别/风控） */
+const OPENLIST_UA =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Safari/537.36 Chrome/142.0.0.0 OpenList/425.6.30"
+
 /** Cookie 辅助函数 */
 function getCookieValue(cookieStr: string, key: string): string | null {
   const match = cookieStr.match(new RegExp(`(?:^|;\\s*)${key}=([^;]*)`))
@@ -62,6 +66,8 @@ export class Pan189Client {
   private sessionKey: string = ""
   /** 189CloudPC 的 access_token（accessToken 登录模式） */
   private accessToken: string = ""
+  /** 登录失败冷却：登录被 189 风控/拒绝后，冷却期内不再重复触发 login() */
+  private loginCooldownUntil = 0
   private onCookieUpdate?: (cookie: string) => void
 
   constructor(
@@ -107,31 +113,49 @@ export class Pan189Client {
    * 2. 若未登录且配置了账号密码，执行 open.e.189.cn OAuth2 登录流程
    */
   async login(): Promise<void> {
+    try {
+      await this.loginInner()
+    } catch (e) {
+      // 登录失败（风控/网络/验证码）→ 冷却 5 分钟，避免每次请求都重试加重风控
+      this.loginCooldownUntil = Date.now() + 5 * 60 * 1000
+      throw e
+    }
+  }
+
+  /** 登录主体（不含冷却逻辑） */
+  private async loginInner(): Promise<void> {
+    // 登录被 189 风控拒绝后冷却 5 分钟，避免每次请求都重试登录导致风控加重
+    if (this.loginCooldownUntil > Date.now()) {
+      throw new Error(
+        `[189Cloud] 登录处于冷却期（189 风控拒绝后 5 分钟内不自动重试）。` +
+          `建议改用 189CloudPC（access_token 模式），或稍后再试。`,
+      )
+    }
+
     const loginUrl =
       "https://cloud.189.cn/api/portal/loginUrl.action?redirectURL=https%3A%2F%2Fcloud.189.cn%2Fmain.action"
 
     const headers: Record<string, string> = {
-      "User-Agent":
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "User-Agent": OPENLIST_UA,
       Referer: "https://cloud.189.cn/",
     }
     if (this.cookie) {
       headers["Cookie"] = this.cookie
     }
 
+    // 对齐原版 newLogin：跟随重定向（resty 默认行为），最终 URL 判断是否已登录
     const res = await fetch(loginUrl, {
       method: "GET",
       headers,
-      redirect: "manual",
+      redirect: "follow",
     })
 
     this.updateCookie(res.headers.get("set-cookie"))
 
-    const loc = res.headers.get("location") || ""
+    const finalUrl = res.url || ""
     if (
-      loc.includes("cloud.189.cn/web/main") ||
-      loc.includes("cloud.189.cn/main.action") ||
-      res.url.includes("cloud.189.cn/web/main")
+      finalUrl.includes("cloud.189.cn/web/main") ||
+      finalUrl.includes("cloud.189.cn/main.action")
     ) {
       // 已经处于登录状态
       return
@@ -145,11 +169,11 @@ export class Pan189Client {
       throw new Error("[189Cloud] 账号或密码为空，且未提供有效 Cookie")
     }
 
-    // 从跳转链接中提取参数
-    const redirectUrlStr = loc || res.url
+    // 从跳转链接中提取参数（跟随重定向后 res.url 即 open.e.189.cn 登录页）
+    const redirectUrlStr = res.url || ""
     let urlObj: URL
     try {
-      urlObj = new URL(redirectUrlStr, "https://open.e.189.cn")
+      urlObj = new URL(redirectUrlStr)
     } catch {
       urlObj = new URL("https://open.e.189.cn" + redirectUrlStr)
     }
@@ -159,8 +183,7 @@ export class Pan189Client {
     const appId = urlObj.searchParams.get("appId") || "cloud"
 
     const authHeaders: Record<string, string> = {
-      "User-Agent":
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "User-Agent": OPENLIST_UA,
       lt,
       reqid: reqId,
       referer: redirectUrlStr,
@@ -185,8 +208,12 @@ export class Pan189Client {
     this.updateCookie(appConfRes.headers.get("set-cookie"))
     const appConf: AppConfResp189 = await appConfRes.json()
     if (appConf.result !== "0" || !appConf.data) {
+      // 189 风控/拒绝：明确提示用户改用 access_token 模式（189CloudPC）或稍后再试
+      const msg = appConf.msg || JSON.stringify(appConf)
       throw new Error(
-        `[189Cloud] 获取 AppConf 失败: ${appConf.msg || JSON.stringify(appConf)}`,
+        `[189Cloud] 登录被拒绝（获取 AppConf 失败: ${msg}）。` +
+          `这通常是 189 服务端风控（登录请求过于频繁或来源校验失败）。` +
+          `建议改用 189CloudPC（access_token 模式）避免自动登录，或稍后再试。`,
       )
     }
 
@@ -265,18 +292,8 @@ export class Pan189Client {
       throw new Error(`[189Cloud] 登录失败: ${msg}`)
     }
 
-    // 5. 跟随跳转完成授权
-    if (loginData.toUrl) {
-      const authFinishRes = await fetch(loginData.toUrl, {
-        headers: {
-          "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-          Cookie: this.cookie,
-        },
-        redirect: "follow",
-      })
-      this.updateCookie(authFinishRes.headers.get("set-cookie"))
-    }
+    // 5. 对齐原版 newLogin：登录成功后不跟随 toUrl（跟随反而可能覆盖 cookie）
+    //    loginSubmit.do 返回的 Set-Cookie 已是会话凭据，直接可用
   }
 
   /**
@@ -309,8 +326,7 @@ export class Pan189Client {
     const headers: Record<string, string> = {
       Accept: "application/json;charset=UTF-8",
       Referer: "https://cloud.189.cn/",
-      "User-Agent":
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "User-Agent": OPENLIST_UA,
     }
     if (this.cookie) {
       headers["Cookie"] = this.cookie
@@ -487,8 +503,7 @@ export class Pan189Client {
       const probeRes = await fetch(downloadUrl, {
         method: "GET",
         headers: {
-          "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          "User-Agent": OPENLIST_UA,
           Referer: "https://cloud.189.cn/",
         },
         redirect: "manual",

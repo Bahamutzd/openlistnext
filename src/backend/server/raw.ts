@@ -75,6 +75,33 @@ rawRouter.get("/*", async (c) => {
         .toLowerCase()
         .replace(/[^a-z0-9]/g, "")
 
+      // Strm 驱动：.strm 文件返回 strm 文本内容（对齐原版 Link 行为）。
+      // strm 内容 = siteUrl/apiUrl + /d + 编码后的目标存储真实路径，客户端
+      // （播放器/下载器）读取后跳转到真实媒体地址。
+      if (normDriver === "strm") {
+        const driver = await getDriver(
+          resolved.storage.driver,
+          resolved.storage,
+        )
+        if (
+          reqPath.endsWith(".strm") &&
+          typeof (driver as any).strmContentFor === "function"
+        ) {
+          // strm 相对路径（不含挂载前缀，如 /影视/阿凡达.strm）
+          const relativePath = resolved.relative || reqPath
+          // 用本站地址作为 apiBase
+          const proto = c.req.header("x-forwarded-proto") || "http"
+          const host = c.req.header("host") || ""
+          const apiBase = `${proto}://${host}/api`
+          const content = (driver as any).strmContentFor(relativePath, apiBase)
+          c.header("Content-Type", "text/plain; charset=utf-8")
+          c.header("Access-Control-Allow-Origin", "*")
+          c.header("Access-Control-Allow-Methods", "GET, OPTIONS, HEAD")
+          return c.body(content)
+        }
+        // 非 .strm 请求（目录/字幕）：走正常 driver.get 流程
+      }
+
       // Remote cloud drivers: fetch download link via driver.get()
       if (normDriver !== "local") {
         try {
